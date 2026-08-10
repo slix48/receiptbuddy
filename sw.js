@@ -1,10 +1,14 @@
-const CACHE_NAME = "receiptbuddy-v4";
+const CACHE_NAME = "receiptbuddy-v5";
 const APP_SHELL = [
   "/",
+  "/?v=5",
   "/index.html",
   "/styles.css",
+  "/styles.css?v=5",
   "/app.mjs",
+  "/app.mjs?v=5",
   "/manifest.json",
+  "/manifest.json?v=5",
   "/assets/icon.svg",
   "/assets/receipt-scan-hero.png"
 ];
@@ -29,7 +33,7 @@ self.addEventListener("fetch", (event) => {
 
   if (isAppFile) {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: "no-store" })
         .then((response) => {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));

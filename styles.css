@@ -141,8 +141,7 @@ input:focus-visible,
   margin-bottom: 1rem;
 }
 
-.panel-heading h2,
-.candidate-area h3 {
+.panel-heading h2 {
   margin: 0;
   font-size: 1.55rem;
   line-height: 1.1;
@@ -157,7 +156,6 @@ input:focus-visible,
 .icon-button,
 .secondary-button,
 .tip-button,
-.candidate-button,
 .stepper button,
 .primary-action {
   border: 2px solid var(--ink);
@@ -193,7 +191,8 @@ input:focus-visible,
   line-height: 1;
 }
 
-#receiptInput {
+#cameraInput,
+#uploadInput {
   inline-size: 1px;
   block-size: 1px;
   opacity: 0;
@@ -258,30 +257,6 @@ input:focus-visible,
   color: var(--danger);
 }
 
-.candidate-area {
-  margin-top: 1rem;
-}
-
-.candidate-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 0.65rem;
-  margin-top: 0.7rem;
-}
-
-.candidate-button {
-  background: white;
-  color: var(--ink);
-  padding: 0.75rem;
-  text-align: left;
-}
-
-.candidate-button small {
-  display: block;
-  color: var(--muted);
-  font-weight: 700;
-  margin-top: 0.2rem;
-}
 
 .field-label,
 .tip-picker legend,
@@ -342,9 +317,7 @@ input:focus-visible,
   font-size: clamp(1.15rem, 3vw, 1.55rem);
 }
 
-.tip-button.is-selected,
-.candidate-button:hover,
-.candidate-button:focus-visible {
+.tip-button.is-selected {
   background: var(--gold);
   color: #1b1200;
 }
@@ -543,40 +516,17 @@ body.large-text .app {
   width: 100%;
 }
 
-.light-overlay {
-  --light-alpha: 0.22;
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  display: grid;
-  align-items: end;
-  background: rgba(255, 244, 205, var(--light-alpha));
-  backdrop-filter: brightness(1.08);
-}
-
-.light-overlay[hidden] {
-  display: none;
-}
-
-.light-controls {
-  display: grid;
-  gap: 0.75rem;
-  padding: 1rem max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
-  background: rgba(255, 253, 247, 0.92);
-  border-top: 2px solid var(--line);
-}
-
-.light-controls label {
-  font-weight: 800;
-}
-
-.light-controls input[type="range"] {
-  width: 100%;
-  accent-color: var(--teal);
-}
-
 @media (display-mode: standalone) {
   body {
     padding-top: env(safe-area-inset-top);
   }
+}
+
+
+.app-version {
+  width: min(1180px, calc(100% - 1.5rem));
+  margin: -1rem auto 1.5rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: center;
 }

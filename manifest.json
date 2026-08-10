@@ -2,7 +2,7 @@
   "name": "ReceiptBuddy Tip Calculator",
   "short_name": "ReceiptBuddy",
   "description": "Accessible mobile receipt photo tip calculator.",
-  "start_url": "/",
+  "start_url": "/?v=5",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f7f3ea",

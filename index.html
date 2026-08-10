@@ -8,10 +8,10 @@
     <meta name="apple-mobile-web-app-title" content="ReceiptBuddy">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>ReceiptBuddy</title>
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json?v=5">
     <link rel="apple-touch-icon" href="assets/icon.svg">
     <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=5">
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to calculator</a>
@@ -46,7 +46,7 @@
             Upload Photo
           </button>
           <button class="secondary-button light-action" id="lightButton" type="button" aria-pressed="false">
-            Dim Light
+            Phone Flashlight
           </button>
         </div>
         <input id="cameraInput" type="file" accept="image/*" capture="environment">
@@ -63,12 +63,6 @@
         <div class="status-box" id="scanStatus" role="status" aria-live="polite">
           Waiting for a receipt photo.
         </div>
-
-        <details class="text-review" id="textReview" hidden>
-          <summary>Text Read From Receipt</summary>
-          <textarea id="recognizedText" rows="7" aria-label="Text read from receipt"></textarea>
-          <button class="secondary-button compact" id="rescanTextButton" type="button">Use This Text</button>
-        </details>
       </section>
 
       <section class="tool-panel math-panel" aria-labelledby="math-title">
@@ -137,14 +131,8 @@
       </section>
     </main>
 
-    <div class="light-overlay" id="lightOverlay" hidden>
-      <div class="light-controls" role="dialog" aria-label="Dim light mode">
-        <label for="lightSlider">Light level</label>
-        <input id="lightSlider" type="range" min="12" max="35" value="22">
-        <button class="secondary-button compact" id="closeLightButton" type="button">Close Light</button>
-      </div>
-    </div>
+    <p class="app-version" id="appVersion" aria-label="App version">v5</p>
 
-    <script type="module" src="app.mjs"></script>
+    <script type="module" src="app.mjs?v=5"></script>
   </body>
 </html>

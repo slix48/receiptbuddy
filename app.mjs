@@ -11,10 +11,13 @@ const state = {
   photoUrl: "",
   ocrWorker: null,
   lightOn: false,
+  torchStream: null,
+  torchTrack: null,
 };
 
 const finalTotalWords = /\b(grand\s+total|amount\s+due|balance\s+due|total\s+due|final\s+total|total|amount)\b/i;
 const nonFinalTotalWords = /\b(subtotal|sub\s+total|pre[-\s]?tax|tax|sales\s+tax|tip|gratuity|change|cash|paid|payment|visa|mastercard|amex|discover|card|auth|approval|server|table)\b/i;
+
 export function parseMoney(value) {
   if (typeof value !== "string" && typeof value !== "number") {
     return 0;
@@ -69,9 +72,7 @@ export function parseReceiptText(text) {
 
     matches.forEach((match) => {
       const amount = parseMoney(match[1]);
-      if (amount <= 0 || amount > 100000) {
-        return;
-      }
+      if (amount <= 0 || amount > 100000) return;
 
       let score = 0;
       if (isFinalTotal) score += 100;
@@ -116,6 +117,7 @@ export function parseReceiptText(text) {
     text: lines.join("\n"),
   };
 }
+
 function loadScript(src) {
   return new Promise((resolve, reject) => {
     const existing = document.querySelector(`script[src="${src}"]`);
@@ -161,9 +163,7 @@ async function recognizeWithTesseract(file, onProgress) {
 }
 
 async function recognizeWithTextDetector(file) {
-  if (!("TextDetector" in window)) {
-    return "";
-  }
+  if (!("TextDetector" in window)) return "";
 
   const detector = new window.TextDetector();
   const bitmap = await createImageBitmap(file);
@@ -175,32 +175,20 @@ async function recognizeWithTextDetector(file) {
 async function recognizeTextFromImage(file, onProgress) {
   const tesseractText = await recognizeWithTesseract(file, onProgress);
   if (tesseractText) {
-    return {
-      text: tesseractText,
-      supported: true,
-      engine: "OCR",
-    };
+    return { text: tesseractText, supported: true, engine: "OCR" };
   }
 
   const browserText = await recognizeWithTextDetector(file);
   if (browserText) {
-    return {
-      text: browserText,
-      supported: true,
-      engine: "browser text reader",
-    };
+    return { text: browserText, supported: true, engine: "browser text reader" };
   }
 
-  return {
-    text: "",
-    supported: false,
-    engine: "",
-  };
+  return { text: "", supported: false, engine: "" };
 }
 
 function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+    navigator.serviceWorker.register("sw.js?v=5").catch(() => {});
   }
 }
 
@@ -210,15 +198,9 @@ function initApp() {
   const cameraButton = document.querySelector("#cameraButton");
   const uploadButton = document.querySelector("#uploadButton");
   const lightButton = document.querySelector("#lightButton");
-  const lightOverlay = document.querySelector("#lightOverlay");
-  const closeLightButton = document.querySelector("#closeLightButton");
-  const lightSlider = document.querySelector("#lightSlider");
   const receiptPreview = document.querySelector("#receiptPreview");
   const photoFrame = document.querySelector(".photo-frame");
   const scanStatus = document.querySelector("#scanStatus");
-  const textReview = document.querySelector("#textReview");
-  const recognizedText = document.querySelector("#recognizedText");
-  const rescanTextButton = document.querySelector("#rescanTextButton");
   const checkTotal = document.querySelector("#checkTotal");
   const customTip = document.querySelector("#customTip");
   const tipButtons = document.querySelector("#tipButtons");
@@ -233,6 +215,7 @@ function initApp() {
   const readButton = document.querySelector("#readButton");
   const copyButton = document.querySelector("#copyButton");
   const largeTextButton = document.querySelector("#largeTextButton");
+  const appVersion = document.querySelector("#appVersion");
 
   const setStatus = (message, isError = false) => {
     scanStatus.textContent = message;
@@ -257,21 +240,14 @@ function initApp() {
     checkTotal.select();
   };
 
-  const renderCandidates = () => {
-    // Suggestions are intentionally hidden; the app shows only the chosen actual total.
-  };
-
-  const useRecognizedText = (text, engine = "OCR") => {
-    recognizedText.value = text;
-    textReview.hidden = text.trim().length === 0;
+  const useRecognizedText = (text) => {
     const parsed = parseReceiptText(text);
-    renderCandidates(parsed.candidates);
 
     if (parsed.total > 0) {
       setTotal(parsed.total);
       setStatus(`Actual total: ${formatMoney(parsed.total)}.`);
     } else if (text.trim()) {
-      setStatus("Text was read, but no total was found. Check the text or enter the total below.", true);
+      setStatus("No Total or Amount line was found. Enter the check total below.", true);
     } else {
       setStatus("No receipt text was found. Enter the check total below.", true);
     }
@@ -290,9 +266,6 @@ function initApp() {
     receiptPreview.src = state.photoUrl;
     photoFrame.classList.add("has-photo");
     setStatus(`${sourceLabel} selected. Reading receipt text.`);
-    renderCandidates([]);
-    recognizedText.value = "";
-    textReview.hidden = true;
 
     try {
       const recognition = await recognizeTextFromImage(file, (percent) => {
@@ -304,43 +277,76 @@ function initApp() {
         return;
       }
 
-      useRecognizedText(recognition.text, recognition.engine);
+      useRecognizedText(recognition.text);
     } catch {
       setStatus("The photo could not be scanned. Enter the check total below.", true);
     }
   };
 
-  const setLightMode = (enabled) => {
-    state.lightOn = enabled;
-    document.body.classList.toggle("light-mode", enabled);
-    lightOverlay.hidden = !enabled;
-    lightButton.setAttribute("aria-pressed", String(enabled));
-    lightButton.textContent = enabled ? "Light On" : "Dim Light";
+  const stopTorch = async () => {
+    if (state.torchTrack) {
+      try {
+        await state.torchTrack.applyConstraints({ advanced: [{ torch: false }] });
+      } catch {}
+      state.torchTrack.stop();
+    }
+
+    if (state.torchStream) {
+      state.torchStream.getTracks().forEach((track) => track.stop());
+    }
+
+    state.torchTrack = null;
+    state.torchStream = null;
+    state.lightOn = false;
+    lightButton.setAttribute("aria-pressed", "false");
+    lightButton.textContent = "Phone Flashlight";
   };
 
-  const setLightStrength = () => {
-    const level = Math.min(35, Math.max(12, Number(lightSlider.value) || 22));
-    lightOverlay.style.setProperty("--light-alpha", String(level / 100));
+  const startTorch = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setStatus("Phone flashlight is not available in this browser.", true);
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+      const [track] = stream.getVideoTracks();
+      const capabilities = track.getCapabilities?.() || {};
+
+      if (!capabilities.torch) {
+        stream.getTracks().forEach((item) => item.stop());
+        setStatus("Phone flashlight is not available on this device/browser.", true);
+        return;
+      }
+
+      await track.applyConstraints({ advanced: [{ torch: true }] });
+      state.torchStream = stream;
+      state.torchTrack = track;
+      state.lightOn = true;
+      lightButton.setAttribute("aria-pressed", "true");
+      lightButton.textContent = "Flashlight On";
+      setStatus("Phone flashlight on.");
+    } catch {
+      setStatus("Phone flashlight could not be turned on. Camera permission may be needed.", true);
+    }
   };
 
-  cameraButton.addEventListener("click", () => {
-    cameraInput.click();
-  });
+  const toggleTorch = async () => {
+    if (state.lightOn) {
+      await stopTorch();
+      setStatus("Phone flashlight off.");
+    } else {
+      await startTorch();
+    }
+  };
 
-  uploadButton.addEventListener("click", () => {
-    uploadInput.click();
-  });
-
-  lightButton.addEventListener("click", () => {
-    setLightMode(!state.lightOn);
-  });
-
-  closeLightButton.addEventListener("click", () => {
-    setLightMode(false);
-  });
-
-  lightSlider.addEventListener("input", setLightStrength);
-  setLightStrength();
+  cameraButton.addEventListener("click", () => cameraInput.click());
+  uploadButton.addEventListener("click", () => uploadInput.click());
+  lightButton.addEventListener("click", toggleTorch);
+  window.addEventListener("pagehide", stopTorch);
 
   cameraInput.addEventListener("change", async () => {
     await handleReceiptFile(cameraInput.files?.[0], "Camera photo");
@@ -350,10 +356,6 @@ function initApp() {
   uploadInput.addEventListener("change", async () => {
     await handleReceiptFile(uploadInput.files?.[0], "Uploaded photo");
     uploadInput.value = "";
-  });
-
-  rescanTextButton.addEventListener("click", () => {
-    useRecognizedText(recognizedText.value, "edited receipt text");
   });
 
   checkTotal.addEventListener("input", updateMath);
@@ -406,9 +408,6 @@ function initApp() {
       tipButton.classList.toggle("is-selected", selected);
       tipButton.setAttribute("aria-pressed", String(selected));
     });
-    renderCandidates([]);
-    recognizedText.value = "";
-    textReview.hidden = true;
     setStatus("Calculator reset.");
     updateMath();
   });
@@ -448,6 +447,7 @@ function initApp() {
     largeTextButton.setAttribute("aria-pressed", "true");
   }
 
+  if (appVersion) appVersion.textContent = "v5";
   updateMath();
   registerServiceWorker();
 }
