@@ -28,6 +28,7 @@ const realReceipt = `
 const actualTotal = parseReceiptText(realReceipt);
 assert.equal(actualTotal.total, 84.80);
 assert.equal(actualTotal.candidates[0].amount, 84.80);
+assert.equal(actualTotal.candidates.length, 1);
 
 const split = calculateTip(100, 20, 4, false);
 assert.equal(split.tip, 20);

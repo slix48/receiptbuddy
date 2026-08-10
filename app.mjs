@@ -13,10 +13,8 @@ const state = {
   lightOn: false,
 };
 
-const negativeReceiptWords = /\b(change|cash|paid|payment|visa|mastercard|amex|discover|card|auth|approval|tip|gratuity|server|table|tax|subtotal|sub\s+total|pre[-\s]?tax)\b/i;
-const strongTotalWords = /\b(grand\s+total|amount\s+due|balance\s+due|total\s+due|final\s+total|total|amount)\b/i;
-const finalAmountWords = /\b(grand\s+total|amount\s+due|balance\s+due|total\s+due|final\s+total|total|amount)\b/i;
-
+const finalTotalWords = /\b(grand\s+total|amount\s+due|balance\s+due|total\s+due|final\s+total|total|amount)\b/i;
+const nonFinalTotalWords = /\b(subtotal|sub\s+total|pre[-\s]?tax|tax|sales\s+tax|tip|gratuity|change|cash|paid|payment|visa|mastercard|amex|discover|card|auth|approval|server|table)\b/i;
 export function parseMoney(value) {
   if (typeof value !== "string" && typeof value !== "number") {
     return 0;
@@ -66,6 +64,9 @@ export function parseReceiptText(text) {
 
   lines.forEach((line, index) => {
     const matches = [...line.matchAll(amountPattern)];
+    const isNonFinal = nonFinalTotalWords.test(line);
+    const isFinalTotal = finalTotalWords.test(line) && !isNonFinal;
+
     matches.forEach((match) => {
       const amount = parseMoney(match[1]);
       if (amount <= 0 || amount > 100000) {
@@ -73,10 +74,9 @@ export function parseReceiptText(text) {
       }
 
       let score = 0;
-      if (strongTotalWords.test(line)) score += 10;
-      if (finalAmountWords.test(line) && index >= lines.length - 8) score += 4;
-      if (negativeReceiptWords.test(line)) score -= 12;
-      if (index >= lines.length - 5) score += 2;
+      if (isFinalTotal) score += 100;
+      if (isNonFinal) score -= 100;
+      if (index >= lines.length - 6) score += 6;
       if (amount >= 5) score += 1;
 
       candidates.push({
@@ -84,13 +84,19 @@ export function parseReceiptText(text) {
         label: line.replace(/\s+/g, " ").slice(0, 64),
         score,
         index,
+        isFinalTotal,
+        isNonFinal,
       });
     });
   });
 
+  const sourceCandidates = candidates.some((candidate) => candidate.isFinalTotal)
+    ? candidates.filter((candidate) => candidate.isFinalTotal)
+    : candidates.filter((candidate) => !candidate.isNonFinal);
+
   const unique = [];
   const seen = new Set();
-  for (const candidate of candidates) {
+  for (const candidate of sourceCandidates.length ? sourceCandidates : candidates) {
     const key = candidate.amount.toFixed(2);
     if (!seen.has(key)) {
       seen.add(key);
@@ -106,11 +112,10 @@ export function parseReceiptText(text) {
 
   return {
     total: unique[0]?.amount ?? 0,
-    candidates: unique.slice(0, 6),
+    candidates: unique.slice(0, 1),
     text: lines.join("\n"),
   };
 }
-
 function loadScript(src) {
   return new Promise((resolve, reject) => {
     const existing = document.querySelector(`script[src="${src}"]`);
@@ -264,7 +269,7 @@ function initApp() {
 
     if (parsed.total > 0) {
       setTotal(parsed.total);
-      setStatus(`${formatMoney(parsed.total)} found with ${engine}. Confirm the total before paying.`);
+      setStatus(`Actual total: ${formatMoney(parsed.total)}.`);
     } else if (text.trim()) {
       setStatus("Text was read, but no total was found. Check the text or enter the total below.", true);
     } else {
