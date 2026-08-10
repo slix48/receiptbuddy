@@ -2,9 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#0f766e">
-    <title>CheckMate Tip</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="ReceiptBuddy">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>ReceiptBuddy</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/icon.svg">
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
@@ -13,8 +19,8 @@
     <header class="hero">
       <img class="hero__image" src="assets/receipt-scan-hero.png" alt="">
       <div class="hero__copy">
-        <p class="eyebrow">Photo tip calculator</p>
-        <h1>CheckMate Tip</h1>
+        <p class="eyebrow">Mobile tip calculator</p>
+        <h1>ReceiptBuddy</h1>
         <p>Snap the check, confirm the total, and choose the tip.</p>
       </div>
     </header>
@@ -24,24 +30,33 @@
         <div class="panel-heading">
           <div>
             <p class="step">Step 1</p>
-            <h2 id="photo-title">Take Check Photo</h2>
+            <h2 id="photo-title">Receipt Photo</h2>
           </div>
           <button class="icon-button" id="largeTextButton" type="button" aria-pressed="false" title="Large text">
             Aa
           </button>
         </div>
 
-        <button class="primary-action" id="photoButton" type="button">
-          <span aria-hidden="true" class="button-symbol">[]</span>
-          <span>Take or Choose Photo</span>
-        </button>
-        <input id="receiptInput" type="file" accept="image/*" capture="environment">
+        <div class="photo-actions" aria-label="Receipt photo options">
+          <button class="primary-action" id="cameraButton" type="button">
+            <span aria-hidden="true" class="button-symbol">[]</span>
+            <span>Take Photo</span>
+          </button>
+          <button class="secondary-button upload-action" id="uploadButton" type="button">
+            Upload Photo
+          </button>
+          <button class="secondary-button light-action" id="lightButton" type="button" aria-pressed="false">
+            Dim Light
+          </button>
+        </div>
+        <input id="cameraInput" type="file" accept="image/*" capture="environment">
+        <input id="uploadInput" type="file" accept="image/*">
 
         <div class="photo-frame" aria-live="polite">
           <img id="receiptPreview" alt="Selected receipt photo">
           <div id="photoEmpty" class="photo-empty">
             <strong>No receipt photo</strong>
-            <span>Use the button above.</span>
+            <span>Take or upload one.</span>
           </div>
         </div>
 
@@ -53,6 +68,12 @@
           <h3>Found Amounts</h3>
           <div class="candidate-list" id="candidateList"></div>
         </div>
+
+        <details class="text-review" id="textReview" hidden>
+          <summary>Text Read From Receipt</summary>
+          <textarea id="recognizedText" rows="7" aria-label="Text read from receipt"></textarea>
+          <button class="secondary-button compact" id="rescanTextButton" type="button">Use This Text</button>
+        </details>
       </section>
 
       <section class="tool-panel math-panel" aria-labelledby="math-title">
@@ -120,6 +141,14 @@
         </div>
       </section>
     </main>
+
+    <div class="light-overlay" id="lightOverlay" hidden>
+      <div class="light-controls" role="dialog" aria-label="Dim light mode">
+        <label for="lightSlider">Light level</label>
+        <input id="lightSlider" type="range" min="12" max="35" value="22">
+        <button class="secondary-button compact" id="closeLightButton" type="button">Close Light</button>
+      </div>
+    </div>
 
     <template id="candidateTemplate">
       <button class="candidate-button" type="button">

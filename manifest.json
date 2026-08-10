@@ -1,0 +1,19 @@
+{
+  "name": "ReceiptBuddy Tip Calculator",
+  "short_name": "ReceiptBuddy",
+  "description": "Accessible mobile receipt photo tip calculator.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f3ea",
+  "theme_color": "#0f766e",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

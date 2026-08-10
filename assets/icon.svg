@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ReceiptBuddy">
+  <rect width="512" height="512" rx="96" fill="#0f766e"/>
+  <path d="M142 96h228v320l-38-24-38 24-38-24-38 24-38-24-38 24V96z" fill="#fffdf7"/>
+  <path d="M184 170h144M184 222h144M184 274h96" stroke="#14211f" stroke-width="28" stroke-linecap="round"/>
+  <circle cx="332" cy="328" r="54" fill="#d89b22"/>
+  <path d="M310 330l17 17 34-42" fill="none" stroke="#14211f" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -9,6 +9,8 @@ const state = {
   split: 1,
   roundUp: false,
   photoUrl: "",
+  ocrWorker: null,
+  lightOn: false,
 };
 
 const negativeReceiptWords = /\b(change|cash|paid|payment|visa|mastercard|amex|discover|card|auth|approval|tip|gratuity|server|table)\b/i;
@@ -109,34 +111,112 @@ export function parseReceiptText(text) {
   };
 }
 
-async function recognizeTextFromImage(file) {
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      if (window.Tesseract) resolve();
+      existing.addEventListener("load", resolve, { once: true });
+      existing.addEventListener("error", reject, { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.append(script);
+  });
+}
+
+async function getOcrWorker(onProgress) {
+  if (state.ocrWorker) return state.ocrWorker;
+
+  await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js");
+  state.ocrWorker = await window.Tesseract.createWorker("eng", 1, {
+    logger: (event) => {
+      if (event.status === "recognizing text" && typeof event.progress === "number") {
+        onProgress?.(Math.round(event.progress * 100));
+      }
+    },
+  });
+
+  return state.ocrWorker;
+}
+
+async function recognizeWithTesseract(file, onProgress) {
+  try {
+    const worker = await getOcrWorker(onProgress);
+    const result = await worker.recognize(file);
+    return result?.data?.text?.trim() || "";
+  } catch {
+    return "";
+  }
+}
+
+async function recognizeWithTextDetector(file) {
   if (!("TextDetector" in window)) {
-    return {
-      text: "",
-      supported: false,
-    };
+    return "";
   }
 
   const detector = new window.TextDetector();
   const bitmap = await createImageBitmap(file);
   const detections = await detector.detect(bitmap);
   bitmap.close?.();
+  return detections.map((item) => item.rawValue || "").join("\n").trim();
+}
+
+async function recognizeTextFromImage(file, onProgress) {
+  const tesseractText = await recognizeWithTesseract(file, onProgress);
+  if (tesseractText) {
+    return {
+      text: tesseractText,
+      supported: true,
+      engine: "OCR",
+    };
+  }
+
+  const browserText = await recognizeWithTextDetector(file);
+  if (browserText) {
+    return {
+      text: browserText,
+      supported: true,
+      engine: "browser text reader",
+    };
+  }
 
   return {
-    text: detections.map((item) => item.rawValue || "").join("\n"),
-    supported: true,
+    text: "",
+    supported: false,
+    engine: "",
   };
 }
 
+function registerServiceWorker() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+}
+
 function initApp() {
-  const receiptInput = document.querySelector("#receiptInput");
-  const photoButton = document.querySelector("#photoButton");
+  const cameraInput = document.querySelector("#cameraInput");
+  const uploadInput = document.querySelector("#uploadInput");
+  const cameraButton = document.querySelector("#cameraButton");
+  const uploadButton = document.querySelector("#uploadButton");
+  const lightButton = document.querySelector("#lightButton");
+  const lightOverlay = document.querySelector("#lightOverlay");
+  const closeLightButton = document.querySelector("#closeLightButton");
+  const lightSlider = document.querySelector("#lightSlider");
   const receiptPreview = document.querySelector("#receiptPreview");
   const photoFrame = document.querySelector(".photo-frame");
   const scanStatus = document.querySelector("#scanStatus");
   const candidateArea = document.querySelector("#candidateArea");
   const candidateList = document.querySelector("#candidateList");
   const candidateTemplate = document.querySelector("#candidateTemplate");
+  const textReview = document.querySelector("#textReview");
+  const recognizedText = document.querySelector("#recognizedText");
+  const rescanTextButton = document.querySelector("#rescanTextButton");
   const checkTotal = document.querySelector("#checkTotal");
   const customTip = document.querySelector("#customTip");
   const tipButtons = document.querySelector("#tipButtons");
@@ -191,12 +271,23 @@ function initApp() {
     });
   };
 
-  photoButton.addEventListener("click", () => {
-    receiptInput.click();
-  });
+  const useRecognizedText = (text, engine = "OCR") => {
+    recognizedText.value = text;
+    textReview.hidden = text.trim().length === 0;
+    const parsed = parseReceiptText(text);
+    renderCandidates(parsed.candidates);
 
-  receiptInput.addEventListener("change", async () => {
-    const [file] = receiptInput.files || [];
+    if (parsed.total > 0) {
+      setTotal(parsed.total);
+      setStatus(`${formatMoney(parsed.total)} found with ${engine}. Confirm the total before paying.`);
+    } else if (text.trim()) {
+      setStatus("Text was read, but no total was found. Check the text or enter the total below.", true);
+    } else {
+      setStatus("No receipt text was found. Enter the check total below.", true);
+    }
+  };
+
+  const handleReceiptFile = async (file, sourceLabel) => {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
@@ -208,28 +299,71 @@ function initApp() {
     state.photoUrl = URL.createObjectURL(file);
     receiptPreview.src = state.photoUrl;
     photoFrame.classList.add("has-photo");
-    setStatus("Reading the receipt photo.");
+    setStatus(`${sourceLabel} selected. Reading receipt text.`);
     renderCandidates([]);
+    recognizedText.value = "";
+    textReview.hidden = true;
 
     try {
-      const recognition = await recognizeTextFromImage(file);
+      const recognition = await recognizeTextFromImage(file, (percent) => {
+        setStatus(`Reading receipt text: ${percent}%`);
+      });
+
       if (!recognition.supported) {
-        setStatus("This browser cannot read receipt text automatically. Enter the check total below.", true);
+        setStatus("Receipt text could not be read on this device. Enter the check total below.", true);
         return;
       }
 
-      const parsed = parseReceiptText(recognition.text);
-      renderCandidates(parsed.candidates);
-
-      if (parsed.total > 0) {
-        setTotal(parsed.total);
-        setStatus(`${formatMoney(parsed.total)} found. Confirm the total before paying.`);
-      } else {
-        setStatus("No total was found. Enter the check total below.", true);
-      }
-    } catch (error) {
+      useRecognizedText(recognition.text, recognition.engine);
+    } catch {
       setStatus("The photo could not be scanned. Enter the check total below.", true);
     }
+  };
+
+  const setLightMode = (enabled) => {
+    state.lightOn = enabled;
+    document.body.classList.toggle("light-mode", enabled);
+    lightOverlay.hidden = !enabled;
+    lightButton.setAttribute("aria-pressed", String(enabled));
+    lightButton.textContent = enabled ? "Light On" : "Dim Light";
+  };
+
+  const setLightStrength = () => {
+    const level = Math.min(35, Math.max(12, Number(lightSlider.value) || 22));
+    lightOverlay.style.setProperty("--light-alpha", String(level / 100));
+  };
+
+  cameraButton.addEventListener("click", () => {
+    cameraInput.click();
+  });
+
+  uploadButton.addEventListener("click", () => {
+    uploadInput.click();
+  });
+
+  lightButton.addEventListener("click", () => {
+    setLightMode(!state.lightOn);
+  });
+
+  closeLightButton.addEventListener("click", () => {
+    setLightMode(false);
+  });
+
+  lightSlider.addEventListener("input", setLightStrength);
+  setLightStrength();
+
+  cameraInput.addEventListener("change", async () => {
+    await handleReceiptFile(cameraInput.files?.[0], "Camera photo");
+    cameraInput.value = "";
+  });
+
+  uploadInput.addEventListener("change", async () => {
+    await handleReceiptFile(uploadInput.files?.[0], "Uploaded photo");
+    uploadInput.value = "";
+  });
+
+  rescanTextButton.addEventListener("click", () => {
+    useRecognizedText(recognizedText.value, "edited receipt text");
   });
 
   checkTotal.addEventListener("input", updateMath);
@@ -283,6 +417,8 @@ function initApp() {
       tipButton.setAttribute("aria-pressed", String(selected));
     });
     renderCandidates([]);
+    recognizedText.value = "";
+    textReview.hidden = true;
     setStatus("Calculator reset.");
     updateMath();
   });
@@ -314,15 +450,16 @@ function initApp() {
     const enabled = !document.body.classList.contains("large-text");
     document.body.classList.toggle("large-text", enabled);
     largeTextButton.setAttribute("aria-pressed", String(enabled));
-    localStorage.setItem("checkmate-large-text", enabled ? "true" : "false");
+    localStorage.setItem("receiptbuddy-large-text", enabled ? "true" : "false");
   });
 
-  if (localStorage.getItem("checkmate-large-text") === "true") {
+  if (localStorage.getItem("receiptbuddy-large-text") === "true") {
     document.body.classList.add("large-text");
     largeTextButton.setAttribute("aria-pressed", "true");
   }
 
   updateMath();
+  registerServiceWorker();
 }
 
 if (typeof window !== "undefined" && typeof document !== "undefined") {

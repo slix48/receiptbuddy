@@ -538,3 +538,45 @@ body.large-text .app {
     scroll-behavior: auto !important;
   }
 }
+
+.light-action {
+  width: 100%;
+}
+
+.light-overlay {
+  --light-alpha: 0.22;
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  align-items: end;
+  background: rgba(255, 244, 205, var(--light-alpha));
+  backdrop-filter: brightness(1.08);
+}
+
+.light-overlay[hidden] {
+  display: none;
+}
+
+.light-controls {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  background: rgba(255, 253, 247, 0.92);
+  border-top: 2px solid var(--line);
+}
+
+.light-controls label {
+  font-weight: 800;
+}
+
+.light-controls input[type="range"] {
+  width: 100%;
+  accent-color: var(--teal);
+}
+
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+  }
+}
