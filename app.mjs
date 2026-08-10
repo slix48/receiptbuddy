@@ -188,7 +188,7 @@ async function recognizeTextFromImage(file, onProgress) {
 
 function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js?v=5").catch(() => {});
+    navigator.serviceWorker.register("sw.js?v=6").catch(() => {});
   }
 }
 
@@ -299,7 +299,7 @@ function initApp() {
     state.torchStream = null;
     state.lightOn = false;
     lightButton.setAttribute("aria-pressed", "false");
-    lightButton.textContent = "Phone Flashlight";
+    lightButton.textContent = "Flashlight";
   };
 
   const startTorch = async () => {
@@ -447,7 +447,7 @@ function initApp() {
     largeTextButton.setAttribute("aria-pressed", "true");
   }
 
-  if (appVersion) appVersion.textContent = "v5";
+  if (appVersion) appVersion.textContent = "v6";
   updateMath();
   registerServiceWorker();
 }

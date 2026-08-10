@@ -3,15 +3,15 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#0f766e">
+    <meta name="theme-color" content="#111111">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="ReceiptBuddy">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>ReceiptBuddy</title>
-    <link rel="manifest" href="manifest.json?v=5">
+    <link rel="manifest" href="manifest.json?v=6">
     <link rel="apple-touch-icon" href="assets/icon.svg">
     <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css?v=5">
+    <link rel="stylesheet" href="styles.css?v=6">
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to calculator</a>
@@ -19,9 +19,9 @@
     <header class="hero">
       <img class="hero__image" src="assets/receipt-scan-hero.png" alt="">
       <div class="hero__copy">
-        <p class="eyebrow">Mobile tip calculator</p>
+        <p class="eyebrow">Private dining utility</p>
         <h1>ReceiptBuddy</h1>
-        <p>Snap the check, confirm the total, and choose the tip.</p>
+        <p>Scan the check. See the amount. Leave with confidence.</p>
       </div>
     </header>
 
@@ -30,7 +30,7 @@
         <div class="panel-heading">
           <div>
             <p class="step">Step 1</p>
-            <h2 id="photo-title">Receipt Photo</h2>
+            <h2 id="photo-title">Check Scan</h2>
           </div>
           <button class="icon-button" id="largeTextButton" type="button" aria-pressed="false" title="Large text">
             Aa
@@ -39,14 +39,14 @@
 
         <div class="photo-actions" aria-label="Receipt photo options">
           <button class="primary-action" id="cameraButton" type="button">
-            <span aria-hidden="true" class="button-symbol">[]</span>
+            <span aria-hidden="true" class="button-symbol"></span>
             <span>Take Photo</span>
           </button>
           <button class="secondary-button upload-action" id="uploadButton" type="button">
-            Upload Photo
+            Upload
           </button>
           <button class="secondary-button light-action" id="lightButton" type="button" aria-pressed="false">
-            Phone Flashlight
+            Flashlight
           </button>
         </div>
         <input id="cameraInput" type="file" accept="image/*" capture="environment">
@@ -69,7 +69,7 @@
         <div class="panel-heading">
           <div>
             <p class="step">Step 2</p>
-            <h2 id="math-title">Confirm Total</h2>
+            <h2 id="math-title">Amount</h2>
           </div>
           <button class="secondary-button compact" id="resetButton" type="button">Reset</button>
         </div>
@@ -79,7 +79,7 @@
           <span aria-hidden="true">$</span>
           <input id="checkTotal" type="text" inputmode="decimal" autocomplete="off" value="42.00" aria-describedby="totalHelp">
         </div>
-        <p class="help-text" id="totalHelp">Edit this number before choosing the tip.</p>
+        <p class="help-text" id="totalHelp">Confirm before paying.</p>
 
         <fieldset class="tip-picker">
           <legend>Tip</legend>
@@ -131,8 +131,8 @@
       </section>
     </main>
 
-    <p class="app-version" id="appVersion" aria-label="App version">v5</p>
+    <p class="app-version" id="appVersion" aria-label="App version">v6</p>
 
-    <script type="module" src="app.mjs?v=5"></script>
+    <script type="module" src="app.mjs?v=6"></script>
   </body>
 </html>

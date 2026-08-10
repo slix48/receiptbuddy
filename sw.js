@@ -1,14 +1,14 @@
-const CACHE_NAME = "receiptbuddy-v5";
+const CACHE_NAME = "receiptbuddy-v6";
 const APP_SHELL = [
   "/",
-  "/?v=5",
+  "/?v=6",
   "/index.html",
   "/styles.css",
-  "/styles.css?v=5",
+  "/styles.css?v=6",
   "/app.mjs",
-  "/app.mjs?v=5",
+  "/app.mjs?v=6",
   "/manifest.json",
-  "/manifest.json?v=5",
+  "/manifest.json?v=6",
   "/assets/icon.svg",
   "/assets/receipt-scan-hero.png"
 ];
