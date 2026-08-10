@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "node build.mjs",
+    "dev": "node server.mjs",
     "start": "node server.mjs",
-    "test": "node --check app.mjs && node --check server.mjs && node test-parser.mjs"
+    "test": "node --check app.mjs && node --check server.mjs && node --check build.mjs && node test-parser.mjs && npm run build"
   }
 }
