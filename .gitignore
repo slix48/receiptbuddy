@@ -1,0 +1,5 @@
+server.out
+server.err
+verify-*.png
+.DS_Store
+Thumbs.db

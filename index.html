@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0f766e">
+    <title>CheckMate Tip</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to calculator</a>
+
+    <header class="hero">
+      <img class="hero__image" src="assets/receipt-scan-hero.png" alt="">
+      <div class="hero__copy">
+        <p class="eyebrow">Photo tip calculator</p>
+        <h1>CheckMate Tip</h1>
+        <p>Snap the check, confirm the total, and choose the tip.</p>
+      </div>
+    </header>
+
+    <main id="main" class="app" aria-label="Tip calculator">
+      <section class="tool-panel scan-panel" aria-labelledby="photo-title">
+        <div class="panel-heading">
+          <div>
+            <p class="step">Step 1</p>
+            <h2 id="photo-title">Take Check Photo</h2>
+          </div>
+          <button class="icon-button" id="largeTextButton" type="button" aria-pressed="false" title="Large text">
+            Aa
+          </button>
+        </div>
+
+        <button class="primary-action" id="photoButton" type="button">
+          <span aria-hidden="true" class="button-symbol">[]</span>
+          <span>Take or Choose Photo</span>
+        </button>
+        <input id="receiptInput" type="file" accept="image/*" capture="environment">
+
+        <div class="photo-frame" aria-live="polite">
+          <img id="receiptPreview" alt="Selected receipt photo">
+          <div id="photoEmpty" class="photo-empty">
+            <strong>No receipt photo</strong>
+            <span>Use the button above.</span>
+          </div>
+        </div>
+
+        <div class="status-box" id="scanStatus" role="status" aria-live="polite">
+          Waiting for a receipt photo.
+        </div>
+
+        <div class="candidate-area" id="candidateArea" hidden>
+          <h3>Found Amounts</h3>
+          <div class="candidate-list" id="candidateList"></div>
+        </div>
+      </section>
+
+      <section class="tool-panel math-panel" aria-labelledby="math-title">
+        <div class="panel-heading">
+          <div>
+            <p class="step">Step 2</p>
+            <h2 id="math-title">Confirm Total</h2>
+          </div>
+          <button class="secondary-button compact" id="resetButton" type="button">Reset</button>
+        </div>
+
+        <label class="field-label" for="checkTotal">Check total</label>
+        <div class="money-field">
+          <span aria-hidden="true">$</span>
+          <input id="checkTotal" type="text" inputmode="decimal" autocomplete="off" value="42.00" aria-describedby="totalHelp">
+        </div>
+        <p class="help-text" id="totalHelp">Edit this number before choosing the tip.</p>
+
+        <fieldset class="tip-picker">
+          <legend>Tip</legend>
+          <div class="tip-grid" id="tipButtons">
+            <button class="tip-button" type="button" data-tip="15">15%</button>
+            <button class="tip-button is-selected" type="button" data-tip="18" aria-pressed="true">18%</button>
+            <button class="tip-button" type="button" data-tip="20">20%</button>
+            <button class="tip-button" type="button" data-tip="22">22%</button>
+          </div>
+          <label class="custom-tip" for="customTip">
+            <span>Custom tip</span>
+            <input id="customTip" type="number" inputmode="decimal" min="0" max="100" step="0.5" placeholder="%" aria-label="Custom tip percent">
+          </label>
+        </fieldset>
+
+        <div class="split-row" aria-label="Split bill">
+          <span>People</span>
+          <div class="stepper">
+            <button id="splitMinus" type="button" aria-label="Fewer people">-</button>
+            <output id="splitCount" for="splitMinus splitPlus">1</output>
+            <button id="splitPlus" type="button" aria-label="More people">+</button>
+          </div>
+        </div>
+
+        <label class="toggle-row">
+          <input id="roundTotal" type="checkbox">
+          <span>Round final total up</span>
+        </label>
+
+        <div class="results" aria-live="polite">
+          <div>
+            <span>Tip amount</span>
+            <strong id="tipAmount">$7.56</strong>
+          </div>
+          <div class="total-line">
+            <span>Total to pay</span>
+            <strong id="grandTotal">$49.56</strong>
+          </div>
+          <div>
+            <span>Each person</span>
+            <strong id="perPerson">$49.56</strong>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <button class="secondary-button" id="readButton" type="button">Read Total</button>
+          <button class="secondary-button" id="copyButton" type="button">Copy</button>
+        </div>
+      </section>
+    </main>
+
+    <template id="candidateTemplate">
+      <button class="candidate-button" type="button">
+        <span class="candidate-amount"></span>
+        <small class="candidate-label"></small>
+      </button>
+    </template>
+
+    <script type="module" src="app.mjs"></script>
+  </body>
+</html>
