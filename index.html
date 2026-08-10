@@ -64,11 +64,6 @@
           Waiting for a receipt photo.
         </div>
 
-        <div class="candidate-area" id="candidateArea" hidden>
-          <h3>Found Amounts</h3>
-          <div class="candidate-list" id="candidateList"></div>
-        </div>
-
         <details class="text-review" id="textReview" hidden>
           <summary>Text Read From Receipt</summary>
           <textarea id="recognizedText" rows="7" aria-label="Text read from receipt"></textarea>
@@ -149,13 +144,6 @@
         <button class="secondary-button compact" id="closeLightButton" type="button">Close Light</button>
       </div>
     </div>
-
-    <template id="candidateTemplate">
-      <button class="candidate-button" type="button">
-        <span class="candidate-amount"></span>
-        <small class="candidate-label"></small>
-      </button>
-    </template>
 
     <script type="module" src="app.mjs"></script>
   </body>

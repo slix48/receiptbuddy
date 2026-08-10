@@ -13,9 +13,9 @@ const state = {
   lightOn: false,
 };
 
-const negativeReceiptWords = /\b(change|cash|paid|payment|visa|mastercard|amex|discover|card|auth|approval|tip|gratuity|server|table)\b/i;
-const strongTotalWords = /\b(grand\s+total|amount\s+due|balance\s+due|total\s+due|total)\b/i;
-const weakTotalWords = /\b(subtotal|sub\s+total|pre[-\s]?tax|food|sales)\b/i;
+const negativeReceiptWords = /\b(change|cash|paid|payment|visa|mastercard|amex|discover|card|auth|approval|tip|gratuity|server|table|tax|subtotal|sub\s+total|pre[-\s]?tax)\b/i;
+const strongTotalWords = /\b(grand\s+total|amount\s+due|balance\s+due|total\s+due|final\s+total|total|amount)\b/i;
+const finalAmountWords = /\b(grand\s+total|amount\s+due|balance\s+due|total\s+due|final\s+total|total|amount)\b/i;
 
 export function parseMoney(value) {
   if (typeof value !== "string" && typeof value !== "number") {
@@ -73,9 +73,9 @@ export function parseReceiptText(text) {
       }
 
       let score = 0;
-      if (strongTotalWords.test(line)) score += 8;
-      if (weakTotalWords.test(line)) score += 3;
-      if (negativeReceiptWords.test(line)) score -= 6;
+      if (strongTotalWords.test(line)) score += 10;
+      if (finalAmountWords.test(line) && index >= lines.length - 8) score += 4;
+      if (negativeReceiptWords.test(line)) score -= 12;
       if (index >= lines.length - 5) score += 2;
       if (amount >= 5) score += 1;
 
@@ -211,9 +211,6 @@ function initApp() {
   const receiptPreview = document.querySelector("#receiptPreview");
   const photoFrame = document.querySelector(".photo-frame");
   const scanStatus = document.querySelector("#scanStatus");
-  const candidateArea = document.querySelector("#candidateArea");
-  const candidateList = document.querySelector("#candidateList");
-  const candidateTemplate = document.querySelector("#candidateTemplate");
   const textReview = document.querySelector("#textReview");
   const recognizedText = document.querySelector("#recognizedText");
   const rescanTextButton = document.querySelector("#rescanTextButton");
@@ -255,20 +252,8 @@ function initApp() {
     checkTotal.select();
   };
 
-  const renderCandidates = (candidates) => {
-    candidateList.textContent = "";
-    candidateArea.hidden = candidates.length === 0;
-
-    candidates.forEach((candidate, index) => {
-      const button = candidateTemplate.content.firstElementChild.cloneNode(true);
-      button.querySelector(".candidate-amount").textContent = formatMoney(candidate.amount);
-      button.querySelector(".candidate-label").textContent = index === 0 ? "Best match" : candidate.label;
-      button.addEventListener("click", () => {
-        setTotal(candidate.amount);
-        setStatus(`${formatMoney(candidate.amount)} selected as the check total.`);
-      });
-      candidateList.append(button);
-    });
+  const renderCandidates = () => {
+    // Suggestions are intentionally hidden; the app shows only the chosen actual total.
   };
 
   const useRecognizedText = (text, engine = "OCR") => {

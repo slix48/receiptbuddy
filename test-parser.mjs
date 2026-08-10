@@ -17,6 +17,18 @@ const parsed = parseReceiptText(receipt);
 assert.equal(parsed.total, 12.72);
 assert.equal(parsed.candidates[0].amount, 12.72);
 
+const realReceipt = `
+  Lorem Ipsum 48.0
+  Lorem 9.30
+  Lorem I 11.90
+  Subtotal 76.80
+  Sales Tax 8.00
+  AMOUNT 84.80
+`;
+const actualTotal = parseReceiptText(realReceipt);
+assert.equal(actualTotal.total, 84.80);
+assert.equal(actualTotal.candidates[0].amount, 84.80);
+
 const split = calculateTip(100, 20, 4, false);
 assert.equal(split.tip, 20);
 assert.equal(split.grandTotal, 120);
