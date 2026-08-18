@@ -16,17 +16,38 @@ const state = {
 };
 
 const finalTotalWords = /\b(grand\s+total|amount\s+due|balance\s+due|total\s+due|final\s+total|total|amount)\b/i;
-const nonFinalTotalWords = /\b(subtotal|sub\s+total|pre[-\s]?tax|tax|sales\s+tax|tip|gratuity|change|cash|paid|payment|visa|mastercard|amex|discover|card|auth|approval|server|table)\b/i;
+const nonFinalTotalWords = /\b(subtotal|sub\s+total|pre[-\s]?tax|tax|sales\s+tax|tip|gratuity|change|cash|paid|payment|tendered|received|visa|mastercard|amex|discover|debit|credit|card|auth|approval|server|table)\b/i;
 
 export function parseMoney(value) {
   if (typeof value !== "string" && typeof value !== "number") {
     return 0;
   }
 
-  const normalized = String(value)
-    .replace(/[^\d.,-]/g, "")
-    .replace(/,(?=\d{3}\b)/g, "")
-    .replace(",", ".");
+  let normalized = String(value)
+    .trim()
+    .replace(/[^\d.,\s-]/g, "")
+    .replace(/\s+/g, " ");
+
+  const spaceDecimal = normalized.match(/^(-?\d{1,3}(?: \d{3})*|-?\d+) (\d{1,2})$/);
+  if (spaceDecimal) {
+    normalized = `${spaceDecimal[1].replaceAll(" ", "")}.${spaceDecimal[2].padEnd(2, "0")}`;
+  } else {
+    normalized = normalized.replace(/\s/g, "");
+    const lastDot = normalized.lastIndexOf(".");
+    const lastComma = normalized.lastIndexOf(",");
+    const decimalSeparator = lastDot > lastComma ? "." : ",";
+
+    if (lastDot !== -1 && lastComma !== -1) {
+      const thousandsSeparator = decimalSeparator === "." ? "," : ".";
+      normalized = normalized
+        .replaceAll(thousandsSeparator, "")
+        .replace(decimalSeparator, ".");
+    } else if (decimalSeparator === "," && /,\d{1,2}$/.test(normalized)) {
+      normalized = normalized.replace(",", ".");
+    } else {
+      normalized = normalized.replace(/,(?=\d{3}\b)/g, "");
+    }
+  }
 
   const parsed = Number.parseFloat(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -63,15 +84,20 @@ export function parseReceiptText(text) {
     .filter(Boolean);
 
   const candidates = [];
-  const amountPattern = /(?:^|[^\d])(\$?\s*\d{1,4}(?:[,.]\d{3})*(?:[,.]\d{2}))(?!\d)/g;
+  const amountPattern = /(?:^|[^\d])(\$?\s*\d{1,5}(?:(?:[,\s]\d{3})+)?(?:[,.]\d{1,2}|\s+\d{2}))(?!\d)/g;
+  const wholeDollarPattern = /(?:^|[^\d.,])(\$?\s*\d{1,5})(?![\d.,])/g;
 
   lines.forEach((line, index) => {
-    const matches = [...line.matchAll(amountPattern)];
     const isNonFinal = nonFinalTotalWords.test(line);
     const isFinalTotal = finalTotalWords.test(line) && !isNonFinal;
+    const matches = [...line.matchAll(amountPattern)];
+
+    if (isFinalTotal && matches.length === 0) {
+      matches.push(...line.matchAll(wholeDollarPattern));
+    }
 
     matches.forEach((match) => {
-      const amount = parseMoney(match[1]);
+      const amount = Number(parseMoney(match[1]).toFixed(2));
       if (amount <= 0 || amount > 100000) return;
 
       let score = 0;
@@ -97,7 +123,7 @@ export function parseReceiptText(text) {
 
   const unique = [];
   const seen = new Set();
-  for (const candidate of sourceCandidates.length ? sourceCandidates : candidates) {
+  for (const candidate of sourceCandidates) {
     const key = candidate.amount.toFixed(2);
     if (!seen.has(key)) {
       seen.add(key);
