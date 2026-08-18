@@ -1,11 +1,19 @@
 import { strict as assert } from "node:assert";
-import { calculateTip, parseMoney, parseReceiptText } from "./app.mjs";
+import { calculateTip, parseMoney, parseReceiptText, validateMoneyInput } from "./app.mjs";
 
 assert.equal(parseMoney("$1,234.56"), 1234.56);
 assert.equal(parseMoney("18.75"), 18.75);
 assert.equal(parseMoney("1.234,56"), 1234.56);
 assert.equal(parseMoney("12 72"), 12.72);
 assert.equal(parseMoney("$84"), 84);
+assert.deepEqual(validateMoneyInput("42.50"), {
+  isValid: true,
+  amount: 42.5,
+  message: "Confirm before paying.",
+});
+assert.equal(validateMoneyInput("").isValid, false);
+assert.equal(validateMoneyInput("total 42").isValid, false);
+assert.equal(validateMoneyInput("-3.50").message, "Total cannot be negative.");
 
 const receipt = `
   Soup 8.50

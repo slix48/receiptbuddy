@@ -58,6 +58,49 @@ export function formatMoney(value) {
   return moneyFormatter.format(Math.max(0, safeValue));
 }
 
+export function validateMoneyInput(value) {
+  const text = String(value ?? "").trim();
+
+  if (!text) {
+    return {
+      isValid: false,
+      amount: 0,
+      message: "Enter the check total.",
+    };
+  }
+
+  if (!/^\$?\s*-?[\d][\d,.\s]*$/.test(text)) {
+    return {
+      isValid: false,
+      amount: 0,
+      message: "Use numbers only, like 42.50.",
+    };
+  }
+
+  const amount = parseMoney(text);
+  if (amount < 0) {
+    return {
+      isValid: false,
+      amount: 0,
+      message: "Total cannot be negative.",
+    };
+  }
+
+  if (amount > 100000) {
+    return {
+      isValid: false,
+      amount: 0,
+      message: "Total is too large.",
+    };
+  }
+
+  return {
+    isValid: true,
+    amount,
+    message: "Confirm before paying.",
+  };
+}
+
 export function calculateTip(total, tipPercent, split = 1, roundUp = false) {
   const safeTotal = Math.max(0, Number(total) || 0);
   const safeTipPercent = Math.max(0, Number(tipPercent) || 0);
@@ -228,6 +271,7 @@ function initApp() {
   const photoFrame = document.querySelector(".photo-frame");
   const scanStatus = document.querySelector("#scanStatus");
   const checkTotal = document.querySelector("#checkTotal");
+  const totalHelp = document.querySelector("#totalHelp");
   const customTip = document.querySelector("#customTip");
   const tipButtons = document.querySelector("#tipButtons");
   const splitMinus = document.querySelector("#splitMinus");
@@ -249,10 +293,16 @@ function initApp() {
   };
 
   const updateMath = () => {
-    state.total = parseMoney(checkTotal.value);
+    const totalValidation = validateMoneyInput(checkTotal.value);
+    state.total = totalValidation.isValid ? totalValidation.amount : 0;
     state.roundUp = roundTotal.checked;
     const result = calculateTip(state.total, state.tipPercent, state.split, state.roundUp);
 
+    checkTotal.setAttribute("aria-invalid", String(!totalValidation.isValid));
+    totalHelp.textContent = totalValidation.message;
+    totalHelp.classList.toggle("is-error", !totalValidation.isValid);
+    readButton.disabled = !totalValidation.isValid;
+    copyButton.disabled = !totalValidation.isValid;
     tipAmount.textContent = formatMoney(result.tip);
     grandTotal.textContent = formatMoney(result.grandTotal);
     perPerson.textContent = formatMoney(result.perPerson);
