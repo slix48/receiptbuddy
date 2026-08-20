@@ -60,6 +60,10 @@ try {
   assert.match(home.headers["content-type"], /text\/html/);
   assert.equal(home.headers["cache-control"], "no-store");
 
+  const icon = await fetchLocal(port, "/assets/icon.svg");
+  assert.equal(icon.statusCode, 200);
+  assert.equal(icon.headers["content-type"], "image/svg+xml");
+
   const head = await fetchLocal(port, "/", "HEAD");
   assert.equal(head.statusCode, 200);
   assert.equal(head.body, "");
