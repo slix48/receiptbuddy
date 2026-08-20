@@ -16,17 +16,38 @@ const state = {
 };
 
 const finalTotalWords = /\b(grand\s+total|amount\s+due|balance\s+due|total\s+due|final\s+total|total|amount)\b/i;
-const nonFinalTotalWords = /\b(subtotal|sub\s+total|pre[-\s]?tax|tax|sales\s+tax|tip|gratuity|change|cash|paid|payment|visa|mastercard|amex|discover|card|auth|approval|server|table)\b/i;
+const nonFinalTotalWords = /\b(subtotal|sub\s+total|pre[-\s]?tax|tax|sales\s+tax|tip|gratuity|change|cash|paid|payment|tendered|received|visa|mastercard|amex|discover|debit|credit|card|auth|approval|server|table)\b/i;
 
 export function parseMoney(value) {
   if (typeof value !== "string" && typeof value !== "number") {
     return 0;
   }
 
-  const normalized = String(value)
-    .replace(/[^\d.,-]/g, "")
-    .replace(/,(?=\d{3}\b)/g, "")
-    .replace(",", ".");
+  let normalized = String(value)
+    .trim()
+    .replace(/[^\d.,\s-]/g, "")
+    .replace(/\s+/g, " ");
+
+  const spaceDecimal = normalized.match(/^(-?\d{1,3}(?: \d{3})*|-?\d+) (\d{1,2})$/);
+  if (spaceDecimal) {
+    normalized = `${spaceDecimal[1].replaceAll(" ", "")}.${spaceDecimal[2].padEnd(2, "0")}`;
+  } else {
+    normalized = normalized.replace(/\s/g, "");
+    const lastDot = normalized.lastIndexOf(".");
+    const lastComma = normalized.lastIndexOf(",");
+    const decimalSeparator = lastDot > lastComma ? "." : ",";
+
+    if (lastDot !== -1 && lastComma !== -1) {
+      const thousandsSeparator = decimalSeparator === "." ? "," : ".";
+      normalized = normalized
+        .replaceAll(thousandsSeparator, "")
+        .replace(decimalSeparator, ".");
+    } else if (decimalSeparator === "," && /,\d{1,2}$/.test(normalized)) {
+      normalized = normalized.replace(",", ".");
+    } else {
+      normalized = normalized.replace(/,(?=\d{3}\b)/g, "");
+    }
+  }
 
   const parsed = Number.parseFloat(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -35,6 +56,49 @@ export function parseMoney(value) {
 export function formatMoney(value) {
   const safeValue = Number.isFinite(value) ? value : 0;
   return moneyFormatter.format(Math.max(0, safeValue));
+}
+
+export function validateMoneyInput(value) {
+  const text = String(value ?? "").trim();
+
+  if (!text) {
+    return {
+      isValid: false,
+      amount: 0,
+      message: "Enter the check total.",
+    };
+  }
+
+  if (!/^\$?\s*-?[\d][\d,.\s]*$/.test(text)) {
+    return {
+      isValid: false,
+      amount: 0,
+      message: "Use numbers only, like 42.50.",
+    };
+  }
+
+  const amount = parseMoney(text);
+  if (amount < 0) {
+    return {
+      isValid: false,
+      amount: 0,
+      message: "Total cannot be negative.",
+    };
+  }
+
+  if (amount > 100000) {
+    return {
+      isValid: false,
+      amount: 0,
+      message: "Total is too large.",
+    };
+  }
+
+  return {
+    isValid: true,
+    amount,
+    message: "Confirm before paying.",
+  };
 }
 
 export function calculateTip(total, tipPercent, split = 1, roundUp = false) {
@@ -56,6 +120,27 @@ export function calculateTip(total, tipPercent, split = 1, roundUp = false) {
   };
 }
 
+export function validateReceiptImageFile(file) {
+  if (!file) {
+    return {
+      isValid: false,
+      message: "Choose a receipt photo.",
+    };
+  }
+
+  if (!String(file.type || "").startsWith("image/")) {
+    return {
+      isValid: false,
+      message: "That file is not a photo. Choose an image of the receipt.",
+    };
+  }
+
+  return {
+    isValid: true,
+    message: "",
+  };
+}
+
 export function parseReceiptText(text) {
   const lines = String(text || "")
     .split(/\r?\n/)
@@ -63,15 +148,20 @@ export function parseReceiptText(text) {
     .filter(Boolean);
 
   const candidates = [];
-  const amountPattern = /(?:^|[^\d])(\$?\s*\d{1,4}(?:[,.]\d{3})*(?:[,.]\d{2}))(?!\d)/g;
+  const amountPattern = /(?:^|[^\d])(\$?\s*\d{1,5}(?:(?:[,\s]\d{3})+)?(?:[,.]\d{1,2}|\s+\d{2}))(?!\d)/g;
+  const wholeDollarPattern = /(?:^|[^\d.,])(\$?\s*\d{1,5})(?![\d.,])/g;
 
   lines.forEach((line, index) => {
-    const matches = [...line.matchAll(amountPattern)];
     const isNonFinal = nonFinalTotalWords.test(line);
     const isFinalTotal = finalTotalWords.test(line) && !isNonFinal;
+    const matches = [...line.matchAll(amountPattern)];
+
+    if (isFinalTotal && matches.length === 0) {
+      matches.push(...line.matchAll(wholeDollarPattern));
+    }
 
     matches.forEach((match) => {
-      const amount = parseMoney(match[1]);
+      const amount = Number(parseMoney(match[1]).toFixed(2));
       if (amount <= 0 || amount > 100000) return;
 
       let score = 0;
@@ -97,7 +187,7 @@ export function parseReceiptText(text) {
 
   const unique = [];
   const seen = new Set();
-  for (const candidate of sourceCandidates.length ? sourceCandidates : candidates) {
+  for (const candidate of sourceCandidates) {
     const key = candidate.amount.toFixed(2);
     if (!seen.has(key)) {
       seen.add(key);
@@ -202,6 +292,7 @@ function initApp() {
   const photoFrame = document.querySelector(".photo-frame");
   const scanStatus = document.querySelector("#scanStatus");
   const checkTotal = document.querySelector("#checkTotal");
+  const totalHelp = document.querySelector("#totalHelp");
   const customTip = document.querySelector("#customTip");
   const tipButtons = document.querySelector("#tipButtons");
   const splitMinus = document.querySelector("#splitMinus");
@@ -223,10 +314,16 @@ function initApp() {
   };
 
   const updateMath = () => {
-    state.total = parseMoney(checkTotal.value);
+    const totalValidation = validateMoneyInput(checkTotal.value);
+    state.total = totalValidation.isValid ? totalValidation.amount : 0;
     state.roundUp = roundTotal.checked;
     const result = calculateTip(state.total, state.tipPercent, state.split, state.roundUp);
 
+    checkTotal.setAttribute("aria-invalid", String(!totalValidation.isValid));
+    totalHelp.textContent = totalValidation.message;
+    totalHelp.classList.toggle("is-error", !totalValidation.isValid);
+    readButton.disabled = !totalValidation.isValid;
+    copyButton.disabled = !totalValidation.isValid;
     tipAmount.textContent = formatMoney(result.tip);
     grandTotal.textContent = formatMoney(result.grandTotal);
     perPerson.textContent = formatMoney(result.perPerson);
@@ -256,8 +353,9 @@ function initApp() {
   const handleReceiptFile = async (file, sourceLabel) => {
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      setStatus("That file is not a photo. Choose an image of the receipt.", true);
+    const fileValidation = validateReceiptImageFile(file);
+    if (!fileValidation.isValid) {
+      setStatus(fileValidation.message, true);
       return;
     }
 

@@ -1,8 +1,28 @@
 import { strict as assert } from "node:assert";
-import { calculateTip, parseMoney, parseReceiptText } from "./app.mjs";
+import {
+  calculateTip,
+  parseMoney,
+  parseReceiptText,
+  validateMoneyInput,
+  validateReceiptImageFile,
+} from "./app.mjs";
 
 assert.equal(parseMoney("$1,234.56"), 1234.56);
 assert.equal(parseMoney("18.75"), 18.75);
+assert.equal(parseMoney("1.234,56"), 1234.56);
+assert.equal(parseMoney("12 72"), 12.72);
+assert.equal(parseMoney("$84"), 84);
+assert.deepEqual(validateMoneyInput("42.50"), {
+  isValid: true,
+  amount: 42.5,
+  message: "Confirm before paying.",
+});
+assert.equal(validateMoneyInput("").isValid, false);
+assert.equal(validateMoneyInput("total 42").isValid, false);
+assert.equal(validateMoneyInput("-3.50").message, "Total cannot be negative.");
+assert.equal(validateReceiptImageFile({ type: "image/jpeg" }).isValid, true);
+assert.equal(validateReceiptImageFile({ type: "application/pdf" }).message, "That file is not a photo. Choose an image of the receipt.");
+assert.equal(validateReceiptImageFile(null).message, "Choose a receipt photo.");
 
 const receipt = `
   Soup 8.50
@@ -29,6 +49,32 @@ const actualTotal = parseReceiptText(realReceipt);
 assert.equal(actualTotal.total, 84.80);
 assert.equal(actualTotal.candidates[0].amount, 84.80);
 assert.equal(actualTotal.candidates.length, 1);
+
+const oneDecimalTotal = parseReceiptText(`
+  Subtotal 76.80
+  Sales Tax 8.00
+  TOTAL 84.8
+`);
+assert.equal(oneDecimalTotal.total, 84.8);
+
+const spacedDecimalTotal = parseReceiptText(`
+  Burger 8.50
+  Tax 0.97
+  TOTAL 12 72
+`);
+assert.equal(spacedDecimalTotal.total, 12.72);
+
+const wholeDollarTotal = parseReceiptText(`
+  Sandwich 16.00
+  Balance Due $18
+`);
+assert.equal(wholeDollarTotal.total, 18);
+
+const amountTenderedOnly = parseReceiptText(`
+  CASH TENDERED 20.00
+  CHANGE 4.00
+`);
+assert.equal(amountTenderedOnly.total, 0);
 
 const split = calculateTip(100, 20, 4, false);
 assert.equal(split.tip, 20);
