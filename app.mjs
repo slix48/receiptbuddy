@@ -120,6 +120,27 @@ export function calculateTip(total, tipPercent, split = 1, roundUp = false) {
   };
 }
 
+export function validateReceiptImageFile(file) {
+  if (!file) {
+    return {
+      isValid: false,
+      message: "Choose a receipt photo.",
+    };
+  }
+
+  if (!String(file.type || "").startsWith("image/")) {
+    return {
+      isValid: false,
+      message: "That file is not a photo. Choose an image of the receipt.",
+    };
+  }
+
+  return {
+    isValid: true,
+    message: "",
+  };
+}
+
 export function parseReceiptText(text) {
   const lines = String(text || "")
     .split(/\r?\n/)
@@ -332,8 +353,9 @@ function initApp() {
   const handleReceiptFile = async (file, sourceLabel) => {
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      setStatus("That file is not a photo. Choose an image of the receipt.", true);
+    const fileValidation = validateReceiptImageFile(file);
+    if (!fileValidation.isValid) {
+      setStatus(fileValidation.message, true);
       return;
     }
 

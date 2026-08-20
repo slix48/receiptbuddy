@@ -1,5 +1,11 @@
 import { strict as assert } from "node:assert";
-import { calculateTip, parseMoney, parseReceiptText, validateMoneyInput } from "./app.mjs";
+import {
+  calculateTip,
+  parseMoney,
+  parseReceiptText,
+  validateMoneyInput,
+  validateReceiptImageFile,
+} from "./app.mjs";
 
 assert.equal(parseMoney("$1,234.56"), 1234.56);
 assert.equal(parseMoney("18.75"), 18.75);
@@ -14,6 +20,9 @@ assert.deepEqual(validateMoneyInput("42.50"), {
 assert.equal(validateMoneyInput("").isValid, false);
 assert.equal(validateMoneyInput("total 42").isValid, false);
 assert.equal(validateMoneyInput("-3.50").message, "Total cannot be negative.");
+assert.equal(validateReceiptImageFile({ type: "image/jpeg" }).isValid, true);
+assert.equal(validateReceiptImageFile({ type: "application/pdf" }).message, "That file is not a photo. Choose an image of the receipt.");
+assert.equal(validateReceiptImageFile(null).message, "Choose a receipt photo.");
 
 const receipt = `
   Soup 8.50
